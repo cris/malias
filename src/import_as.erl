@@ -3,7 +3,6 @@
 -export([parse_transform/2]).
 
 %TODO:
-% * add specs
 % * support one-tuple import_as
 % * check correct import_as list:
 %  - should contains only {atom, atom}
@@ -17,11 +16,10 @@ transform(Changes, Forms) ->
     Tree = erl_syntax:form_list(Forms),
     ModifiedTree = postorder(Changes, Tree),
     Forms2 = erl_syntax:revert_forms(ModifiedTree),
-    io:format("Result tree~n~p~n", [Forms2]),
+    %io:format("Result tree~n~p~n", [Forms2]),
     Forms2.
 
 parse_transform(Forms, _Options) ->
-    io:format("in import_as~n"),
     PList = fetch_substitutions(Forms),
     transform(PList, Forms).
 
@@ -46,7 +44,6 @@ apply_import_as(Changes, Node) ->
             Module = erl_syntax:atom_value(Argument),
             case proplists:lookup(Module, Changes) of
                 {Module, Original} ->
-                    io:format("update ~p to ~p~n", [Module, Original]),
                     Body = erl_syntax:module_qualifier_body(Node),
                     NewArgument = erl_syntax:atom(Original),
                     erl_syntax:module_qualifier(NewArgument, Body);
