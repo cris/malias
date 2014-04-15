@@ -4,6 +4,7 @@
 
 %TODO:
 % * add specs
+% * support one-tuple import_as
 % * check correct import_as list:
 %  - should contains only {atom, atom}
 % * support multiple import_as options
