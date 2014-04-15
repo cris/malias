@@ -1,0 +1,14 @@
+{application, import_as,
+ [
+  {description, "Support custom name module import via parse-transform"},
+  {vsn, git},
+  {modules, [
+             import_as
+            ]},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {env, []}
+ ]}.
