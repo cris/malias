@@ -3,10 +3,9 @@
 -export([parse_transform/2]).
 
 %TODO:
-% * support one-tuple import_as
 % * check correct import_as list:
 %  - should contains only {atom, atom}
-% * support multiple import_as options
+%  - or only one tuple {atom, atom}
 % * warn in case of duplicated import
 % * error in case of overwritten import, e.g. [{io, one}, {cool, one}]
 %  - show on which lines such conflict occurs
