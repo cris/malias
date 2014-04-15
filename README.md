@@ -4,7 +4,7 @@ To prevent name collision, every Erlang library uses some prefix for each
 module(e.g.: cowboy\_, ejabberd\_, rabbit\_). But standard Erlang doesn't
 provide means for importing such long names in more readable and short form.
 
-import_as is a parse-transform library, which allows to use any module with
+**import_as** is a parse-transform library, which allows to use any module with
 another name.
 
 Here is a short example of using Cowboy library:
@@ -25,12 +25,12 @@ index_handler module.
 
 ## Usage
 
-To work with import_as, you need to provide import options via import_as
-attribute. It's a simple proplist with {original_name, aliased_name} pairs:
+To work with **import\_as**, you need to provide import options via import\_as
+attribute. It's a simple proplist with {original\_name, aliased\_name} pairs:
 
     -import_as([{lists, l}, {string, s}, {myproject_handler, handler}]).
 
-Also, add {parse_transform, import_as} compile option:
+Also, add {parse\_transform, import\_as} compile option:
 
     -compile({parse_transform, import_as}).
 
@@ -38,8 +38,7 @@ Or set it in compilation options for rebar:
 
     %% add import_as in dependencies
     {deps, [
-      {import_as, ".*", {git, "https://github.com/cris/import_as.git", {branch,
-"master"}}}
+      {import_as, ".*", {git, "https://github.com/cris/import_as.git", {branch,"master"}}}
     ]}.
 
     %% Erlang compiler options
