@@ -1,9 +1,9 @@
--module(import_as_tests).
+-module(malias_tests).
 -include_lib("eunit/include/eunit.hrl").
 
--compile({parse_transform, import_as}).
--import_as([{lists, l}, {string, s}]).
--import_as({proplists, pl}).
+-compile({parse_transform, malias}).
+-malias([{lists, l}, {string, s}]).
+-malias({proplists, pl}).
 
 lists_import_test() ->
     Seq = l:seq(1, 5),

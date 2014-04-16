@@ -1,15 +1,15 @@
--module(import_as).
+-module(malias).
 
 -export([parse_transform/2]).
 
 %TODO:
-% * check correct import_as list:
+% * check correct malias list:
 %  - should contains only {atom, atom}
 %  - or only one tuple {atom, atom}
 % * warn in case of duplicated import
 % * error in case of overwritten import, e.g. [{io, one}, {cool, one}]
 %  - show on which lines such conflict occurs
-%    (line 7, line 9 for 2 import_as options)
+%    (line 7, line 9 for 2 malias options)
 
 transform(Changes, Forms) ->
     Tree = erl_syntax:form_list(Forms),
@@ -23,20 +23,20 @@ parse_transform(Forms, _Options) ->
     transform(PList, Forms).
 
 fetch_substitutions(Forms) ->
-    Changes = lists:filtermap(fun is_import_as/1, Forms),
+    Changes = lists:filtermap(fun is_malias/1, Forms),
     FChanges = lists:flatten(Changes),
     lists:map(fun swap_tuple/1, FChanges).
 
-is_import_as({attribute, _Line, import_as, List}) ->
+is_malias({attribute, _Line, malias, List}) ->
     {true, List};
-is_import_as(_) ->
+is_malias(_) ->
     false.
 
 swap_tuple({A,B}) ->
     {B,A}.
 
 
-apply_import_as(Changes, Node) ->
+apply_malias(Changes, Node) ->
     case erl_syntax:type(Node) of
         module_qualifier ->
             Argument = erl_syntax:module_qualifier_argument(Node),
@@ -54,7 +54,7 @@ apply_import_as(Changes, Node) ->
     end.
 
 postorder(Changes, Tree) ->
-    apply_import_as(Changes, case erl_syntax:subtrees(Tree) of
+    apply_malias(Changes, case erl_syntax:subtrees(Tree) of
             [] -> Tree;
             List -> erl_syntax:update_tree(Tree,
                     [[postorder(Changes, Subtree)

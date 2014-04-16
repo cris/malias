@@ -1,9 +1,9 @@
-{application, import_as,
+{application, malias,
  [
-  {description, "Support custom name module import via parse-transform"},
+  {description, "Use any module with more shorter name"},
   {vsn, git},
   {modules, [
-             import_as
+             malias
             ]},
   {registered, []},
   {applications, [
