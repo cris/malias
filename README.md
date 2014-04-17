@@ -30,7 +30,7 @@ attribute. It's a simple proplist with {original\_name, aliased\_name} pairs:
 
     -malias([{lists, l}, {string, s}, {myproject_handler, handler}]).
 
-Also, add {parse\_transform, import\_as} compile option:
+Also, add {parse\_transform, malias} compile option:
 
     -compile({parse_transform, malias}).
 
