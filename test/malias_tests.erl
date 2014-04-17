@@ -16,3 +16,36 @@ string_import_test() ->
 one_tuple_import_test() ->
     Tuple = pl:lookup(b, [{a,1}, {b,2}, {c,3}]),
     ?assertEqual({b,2}, Tuple).
+
+% error cases
+incorrect_term_test() ->
+    Forms = [
+        {attribute,1,file,{"test/malias_tests.erl",1}},
+        {attribute,1,module,malias_tests},
+        {attribute,2,malias,1234}
+    ],
+    Description = io_lib:format("Incorrect parameter for malias: ~p~n", [1234]),
+    ExpectedEForms = [
+        {attribute,1,file,{"test/malias_tests.erl",1}},
+        {attribute,1,module,malias_tests},
+        {error,{2,malias,Description}}
+    ],
+    EForms = malias:parse_transform(Forms, []),
+    ?assertMatch(ExpectedEForms, EForms).
+
+% error cases
+incorrect_list_test() ->
+    Param = [{1,2}],
+    Forms = [
+        {attribute,1,file,{"test/malias_tests.erl",1}},
+        {attribute,1,module,malias_tests},
+        {attribute,2,malias,Param}
+    ],
+    Description = io_lib:format("Incorrect parameter for malias: ~p~n", [Param]),
+    ExpectedEForms = [
+        {attribute,1,file,{"test/malias_tests.erl",1}},
+        {attribute,1,module,malias_tests},
+        {error,{2,malias,Description}}
+    ],
+    EForms = malias:parse_transform(Forms, []),
+    ?assertMatch(ExpectedEForms, EForms).
