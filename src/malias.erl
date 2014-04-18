@@ -5,7 +5,7 @@
 -record(state, {error=false, pairs=[]}).
 
 %TODO:
-% * warn in case of duplicated import
+% * warning in case of duplicated import
 % * error in case of overwritten import, e.g. [{io, one}, {cool, one}]
 %  - show on which lines such conflict occurs
 %    (line 7, line 9 for 2 malias options)
@@ -50,15 +50,18 @@ walk_forms([F|Forms], Acc, State) ->
     walk_forms(Forms, Items ++ Acc, State2).
 
 handle_malias(F={attribute, Line, malias, {A,B}}, S) when is_atom(A), is_atom(B) ->
-    Pairs2 = [{Line, A, B} | S#state.pairs],
-    {[F], S#state{pairs=Pairs2}};
+    Pairs = [{Line, A, B}],
+    handle_items(F, Pairs, S);
+% ignore empty list
+handle_malias(F={attribute, _Line, malias, []}, S) ->
+    {[F], S};
 handle_malias(F={attribute, Line, malias, List}, S) when is_list(List) ->
     case correct_list(List) of
         true ->
             Fun = fun({A,B}) -> {Line,A,B} end,
-            ListWithLine = lists:map(Fun, List),
-            Pairs2 = ListWithLine ++ S#state.pairs,
-            {[F], S#state{pairs=Pairs2}};
+            Pairs = lists:map(Fun, List),
+            handle_items(F, Pairs, S);
+            %{[F], S#state{pairs=Pairs2}};
         false ->
             Error = parameter_error(Line, List),
             {[Error], S#state{error=true}}
@@ -69,6 +72,35 @@ handle_malias({attribute, Line, malias, Term}, S) ->
 handle_malias(F, S) ->
     {[F], S}.
 
+handle_items(Form, Pairs, S) ->
+    OldPairs = S#state.pairs,
+    WForms = lookup_duplicates(Pairs),
+    EForms = [],
+    Pairs2 = Pairs ++ OldPairs,
+    {EForms ++ WForms ++ [Form], S#state{pairs=Pairs2}}.
+
+
+lookup_duplicates([]) ->
+    [];
+lookup_duplicates(List) ->
+    Fun = fun({_,A,B}) -> {A,B} end,
+    Line = element(1, hd(List)),
+    OnlyPairs = lists:map(Fun, List),
+    case lookup_duplicates2(OnlyPairs) of
+        [] ->
+            [];
+        Duplicates  ->
+            [duplicate_warning(Line, Duplicates)]
+    end.
+
+lookup_duplicates2(List) ->
+    SList = lists:sort(List),
+    Fun = fun(T, {T, Dups}) -> {T, [T|Dups]};
+        (T, {_, Dups}) -> {T, Dups}
+    end,
+    {_, Dups} = lists:foldl(Fun, {none, []}, SList),
+    lists:usort(Dups).
+
 correct_list(List) when is_list(List) ->
     Fun = fun({A,B}) when is_atom(A), is_atom(B) -> true;
         (_) -> false
@@ -78,6 +110,11 @@ correct_list(List) when is_list(List) ->
 parameter_error(Line, Term) ->
     Description = io_lib:format("Incorrect parameter for malias: ~p~n", [Term]),
     {error, {Line, ?MODULE, Description}}.
+
+duplicate_warning(Line, Tuples) ->
+    Format = string:join(lists:duplicate(length(Tuples), "~p"), ", "),
+    Description = io_lib:format("Duplicates in malias: " ++ Format, Tuples),
+    {warning, {Line, ?MODULE, Description}}.
 
 transform_pairs(List) when is_list(List) ->
     Fun = fun({_,A,B}) -> {B,A} end,

@@ -33,7 +33,6 @@ incorrect_term_test() ->
     EForms = malias:parse_transform(Forms, []),
     ?assertMatch(ExpectedEForms, EForms).
 
-% error cases
 incorrect_list_test() ->
     Param = [{1,2}],
     Forms = [
@@ -46,6 +45,23 @@ incorrect_list_test() ->
         {attribute,1,file,{"test/malias_tests.erl",1}},
         {attribute,1,module,malias_tests},
         {error,{2,malias,Description}}
+    ],
+    EForms = malias:parse_transform(Forms, []),
+    ?assertMatch(ExpectedEForms, EForms).
+
+duplicated_items_same_list_test() ->
+    Param = [{a,b}, {c,d}, {a,b}, {e,f}, {e,f}],
+    Forms = [
+        {attribute,1,file,{"test/malias_tests.erl",1}},
+        {attribute,1,module,malias_tests},
+        {attribute,2,malias,Param}
+    ],
+    Description = io_lib:format("Duplicates in malias: ~p, ~p", [{a,b}, {e,f}]),
+    ExpectedEForms = [
+        {attribute,1,file,{"test/malias_tests.erl",1}},
+        {attribute,1,module,malias_tests},
+        {attribute,2,malias,Param},
+        {warning,{2,malias,Description}}
     ],
     EForms = malias:parse_transform(Forms, []),
     ?assertMatch(ExpectedEForms, EForms).
