@@ -5,10 +5,11 @@
 -record(state, {error=false, pairs=[]}).
 
 %TODO:
-% * warning in case of duplicated import
 % * error in case of overwritten import, e.g. [{io, one}, {cool, one}]
 %  - show on which lines such conflict occurs
 %    (line 7, line 9 for 2 malias options)
+% * error for same-alias: [{lists, l}, {string, l}]
+% * error for abc-alias: [{a, b}, {b, c}]
 % * Add example of Emake-file
 % * describe tuple-usage in doc
 
