@@ -74,18 +74,14 @@ handle_malias(F, S) ->
 
 handle_items(Form, Pairs, S) ->
     OldPairs = S#state.pairs,
-    WForms = lookup_duplicates(Pairs),
+    WForms = lookup_duplicates(Pairs) ++ lookup_cross_duplicates(Pairs, OldPairs),
     EForms = [],
     Pairs2 = Pairs ++ OldPairs,
     {EForms ++ WForms ++ [Form], S#state{pairs=Pairs2}}.
 
-
-lookup_duplicates([]) ->
-    [];
 lookup_duplicates(List) ->
-    Fun = fun({_,A,B}) -> {A,B} end,
     Line = element(1, hd(List)),
-    OnlyPairs = lists:map(Fun, List),
+    OnlyPairs = just_pairs(List),
     case lookup_duplicates2(OnlyPairs) of
         [] ->
             [];
@@ -101,6 +97,33 @@ lookup_duplicates2(List) ->
     {_, Dups} = lists:foldl(Fun, {none, []}, SList),
     lists:usort(Dups).
 
+just_pairs(List) ->
+    Fun = fun({_,A,B}) -> {A,B} end,
+    lists:map(Fun, List).
+
+lookup_cross_duplicates(_Pairs, []) ->
+    [];
+lookup_cross_duplicates(Pairs, OldPairs) ->
+    Line = element(1, hd(Pairs)),
+    JustPairs = just_pairs(Pairs),
+    UniqPairs = lists:usort(JustPairs),
+    Fun = fun(T, Acc) ->
+            case find_first(T, OldPairs) of
+                none -> Acc;
+                Item -> [Item | Acc]
+            end
+    end,
+    Duplicates = lists:foldl(Fun, [], UniqPairs),
+    [cross_duplicate_warning(Line, {A,B}, PrevLine) ||
+        {PrevLine,A,B} <- Duplicates].
+
+find_first({A,B}, List) when is_list(List) ->
+    Fun = fun({_, X, Y}) -> X =/= A orelse Y =/= B end,
+    case lists:dropwhile(Fun, List) of
+        [] -> none;
+        [X|_]  -> X
+    end.
+
 correct_list(List) when is_list(List) ->
     Fun = fun({A,B}) when is_atom(A), is_atom(B) -> true;
         (_) -> false
@@ -114,6 +137,10 @@ parameter_error(Line, Term) ->
 duplicate_warning(Line, Tuples) ->
     Format = string:join(lists:duplicate(length(Tuples), "~p"), ", "),
     Description = io_lib:format("Duplicates in malias: " ++ Format, Tuples),
+    {warning, {Line, ?MODULE, Description}}.
+
+cross_duplicate_warning(Line, Tuple, PrevLine) ->
+    Description = io_lib:format("Element ~p is duplicated on line ~p", [Tuple, PrevLine]),
     {warning, {Line, ?MODULE, Description}}.
 
 transform_pairs(List) when is_list(List) ->

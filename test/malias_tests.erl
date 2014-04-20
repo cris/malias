@@ -65,3 +65,25 @@ duplicated_items_same_list_test() ->
     ],
     EForms = malias:parse_transform(Forms, []),
     ?assertMatch(ExpectedEForms, EForms).
+
+cross_duplicated_items_test() ->
+    Param = [{a,b}, {c,d}, {e,f}],
+    Param2 = [{a,b}, {e,f}],
+    Forms = [
+        {attribute,1,file,{"test/malias_tests.erl",1}},
+        {attribute,1,module,malias_tests},
+        {attribute,2,malias,Param},
+        {attribute,3,malias,Param2}
+    ],
+    Description1 = io_lib:format("Element ~p is duplicated on line ~p", [{a,b}, 2]),
+    Description2 = io_lib:format("Element ~p is duplicated on line ~p", [{e,f}, 2]),
+    ExpectedEForms = [
+        {attribute,1,file,{"test/malias_tests.erl",1}},
+        {attribute,1,module,malias_tests},
+        {attribute,2,malias,Param},
+        {attribute,3,malias,Param2},
+        {warning,{3,malias,Description1}},
+        {warning,{3,malias,Description2}}
+    ],
+    EForms = malias:parse_transform(Forms, []),
+    ?assertMatch(ExpectedEForms, EForms).
