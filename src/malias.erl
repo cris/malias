@@ -80,49 +80,66 @@ handle_items(Form, Pairs, S) ->
     Pairs2 = Pairs ++ OldPairs,
     {EForms ++ WForms ++ [Form], S#state{pairs=Pairs2}}.
 
-lookup_duplicates(List) ->
+lookup_duplicates(List) when is_list(List) ->
     Line = element(1, hd(List)),
-    OnlyPairs = just_pairs(List),
-    case lookup_duplicates2(OnlyPairs) of
+    case iterate_with_tail(List, fun matcher_same/1, []) of
         [] ->
             [];
-        Duplicates  ->
-            [duplicate_warning(Line, Duplicates)]
+        L when is_list(L)  ->
+            UniqElements = unique_pairs(L),
+            [duplicate_warning(Line, just_pairs(UniqElements))]
     end.
-
-lookup_duplicates2(List) ->
-    SList = lists:sort(List),
-    Fun = fun(T, {T, Dups}) -> {T, [T|Dups]};
-        (T, {_, Dups}) -> {T, Dups}
-    end,
-    {_, Dups} = lists:foldl(Fun, {none, []}, SList),
-    lists:usort(Dups).
-
-just_pairs(List) ->
-    Fun = fun({_,A,B}) -> {A,B} end,
-    lists:map(Fun, List).
 
 lookup_cross_duplicates(_Pairs, []) ->
     [];
 lookup_cross_duplicates(Pairs, OldPairs) ->
     Line = element(1, hd(Pairs)),
-    JustPairs = just_pairs(Pairs),
-    UniqPairs = lists:usort(JustPairs),
-    Fun = fun(T, Acc) ->
-            case find_first(T, OldPairs) of
-                none -> Acc;
-                Item -> [Item | Acc]
-            end
-    end,
-    Duplicates = lists:foldl(Fun, [], UniqPairs),
+    UniqPairs = unique_pairs(Pairs),
+    Duplicates = iterate_with_list(UniqPairs, OldPairs, fun matcher_same/1),
     [cross_duplicate_warning(Line, {A,B}, PrevLine) ||
-        {PrevLine,A,B} <- Duplicates].
+        {PrevLine,A,B} <- lists:reverse(Duplicates)].
 
-find_first({A,B}, List) when is_list(List) ->
-    Fun = fun({_, X, Y}) -> X =/= A orelse Y =/= B end,
-    case lists:dropwhile(Fun, List) of
-        [] -> none;
-        [X|_]  -> X
+iterate_with_list(List, List2, Matcher) ->
+    Fun = fun(T, Acc) ->
+            match_all(T, List2, Matcher) ++ Acc
+    end,
+    lists:foldl(Fun, [], List).
+
+iterate_with_tail([], _Matcher, Acc) ->
+    Acc;
+iterate_with_tail([H|T], Matcher, Acc) ->
+    Elements = match_all(H, T, Matcher),
+    iterate_with_tail(T, Matcher, Elements ++ Acc).
+
+matcher_same({_,A,B}) ->
+    fun({_,X,Y}) -> X =/= A orelse Y =/= B end.
+
+match_all(H, T, Matcher) ->
+    case lists:dropwhile(Matcher(H), T) of
+        [] -> [];
+        [X|_] -> [X]
+    end.
+
+just_pairs(List) ->
+    Fun = fun({_,A,B}) -> {A,B} end,
+    lists:map(Fun, List).
+
+unique_pairs(L) when is_list(L) ->
+    unique_pairs(L, []).
+
+unique_pairs([], Acc) ->
+    Acc;
+unique_pairs([H|T], Acc) ->
+    case is_member(H, T) of
+        true  -> unique_pairs(T, Acc);
+        false -> unique_pairs(T, [H|Acc])
+    end.
+
+is_member({_,A,B}, T) when is_list(T) ->
+    Matcher = fun({_,X,Y}) -> X =/= A orelse Y =/= B end,
+    case lists:dropwhile(Matcher, T) of
+        [] -> false;
+        _ -> true
     end.
 
 correct_list(List) when is_list(List) ->
