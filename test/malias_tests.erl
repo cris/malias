@@ -87,3 +87,29 @@ cross_duplicated_items_test() ->
     ],
     EForms = malias:parse_transform(Forms, []),
     ?assertMatch(ExpectedEForms, EForms).
+
+ab_ac_same_list_test() ->
+    Param = [{a,b}, {e,f}, {a,c}],
+    Forms = [
+        {attribute,1,file,{"test/malias_tests.erl",1}},
+        {attribute,1,module,malias_tests},
+        {attribute,2,malias,Param}
+    ],
+    Description = io_lib:format("Module ~p aliased to several modules: ~p, ~p", [a,b,c]),
+    ExpectedEForms = [
+        {attribute,1,file,{"test/malias_tests.erl",1}},
+        {attribute,1,module,malias_tests},
+        {attribute,2,malias,Param},
+        {error,{2,malias,Description}}
+    ],
+    EForms = malias:parse_transform(Forms, []),
+    ?assertMatch(ExpectedEForms, EForms).
+
+lookup_ab_ac_in_list_test() ->
+    List1 = [{1,a,b}, {1,e,f}, {1,a,c}],
+    Description = io_lib:format("Module ~p aliased to several modules: ~p, ~p", [a,b,c]),
+    ExpectedErrors = [
+        {error, {1, malias, Description}}
+    ],
+    Errors = malias:lookup_ab_ac_in_list(List1),
+    ?assertMatch(ExpectedErrors, Errors).
