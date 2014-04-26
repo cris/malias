@@ -2,10 +2,6 @@
 
 -export([parse_transform/2, format_error/1]).
 
--ifdef(TEST).
--export([lookup_ab_ac_in_list/1]).
--endif.
-
 -record(state, {error=false, pairs=[]}).
 
 %TODO:
@@ -80,7 +76,7 @@ handle_malias(F, S) ->
 handle_items(Form, Pairs, S) ->
     OldPairs = S#state.pairs,
     WForms = lookup_duplicates(Pairs) ++ lookup_cross_duplicates(Pairs, OldPairs),
-    EForms = lookup_ab_ac_in_list(Pairs),
+    EForms = lookup_ab_ac_in_list(Pairs) ++ lookup_ab_ac_crosslist(Pairs, OldPairs),
     Pairs2 = Pairs ++ OldPairs,
     {EForms ++ WForms ++ [Form], S#state{pairs=Pairs2}}.
 
@@ -112,6 +108,13 @@ lookup_ab_ac_in_list(List) when is_list(List) ->
         L when is_list(L)  ->
             [ab_ac_error(Line, Pair) || Pair <- unique_pairs(L)]
     end.
+
+lookup_ab_ac_crosslist(Pairs, OldPairs) when is_list(Pairs) ->
+    Line = element(1, hd(Pairs)),
+    UniqPairs = unique_pairs(Pairs),
+    Matches = iterate_with_list(UniqPairs, OldPairs, fun matcher_ab_ac/1),
+    [ab_ac_cross_error(Line, {A,B,C}, PrevLine, ThisLine) ||
+        {{ThisLine,A,C}, {PrevLine,A,B}} <- Matches].
 
 iterate_with_list(List, List2, Matcher) ->
     Fun = fun(T, Acc) ->
@@ -183,7 +186,10 @@ parameter_error(Line, Term) ->
 
 ab_ac_error(Line, {{_,A,B},{_,A,C}}) ->
     Description = io_lib:format("Module ~p aliased to several modules: ~p, ~p", [A,B,C]),
-    io:format(Description),
+    {error, {Line, ?MODULE, Description}}.
+
+ab_ac_cross_error(Line, {A,B,C}, BLine, CLine) ->
+    Description = io_lib:format("Module ~p aliased to several modules: ~p, ~p on lines: ~p, ~p", [A,B,C,BLine,CLine]),
     {error, {Line, ?MODULE, Description}}.
 
 
@@ -194,7 +200,6 @@ duplicate_warning(Line, Tuples) ->
 
 cross_duplicate_warning(Line, Tuple, PrevLine) ->
     Description = io_lib:format("Element ~p is duplicated on line ~p", [Tuple, PrevLine]),
-    io:format(Description),
     {warning, {Line, ?MODULE, Description}}.
 
 transform_pairs(List) when is_list(List) ->

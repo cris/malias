@@ -105,11 +105,29 @@ ab_ac_same_list_test() ->
     EForms = malias:parse_transform(Forms, []),
     ?assertMatch(ExpectedEForms, EForms).
 
-lookup_ab_ac_in_list_test() ->
-    List1 = [{1,a,b}, {1,e,f}, {1,a,c}],
-    Description = io_lib:format("Module ~p aliased to several modules: ~p, ~p", [a,b,c]),
-    ExpectedErrors = [
-        {error, {1, malias, Description}}
+ab_ac_crosslist_test() ->
+    Param1 = [{d,h}, {e,f}, {a,b}],
+    Param2 = [{a,c}],
+    Param3 = [{a,g}],
+    Forms = [
+        {attribute,1,file,{"test/malias_tests.erl",1}},
+        {attribute,1,module,malias_tests},
+        {attribute,2,malias,Param1},
+        {attribute,3,malias,Param2},
+        {attribute,4,malias,Param3}
     ],
-    Errors = malias:lookup_ab_ac_in_list(List1),
-    ?assertMatch(ExpectedErrors, Errors).
+    Description1 = io_lib:format("Module ~p aliased to several modules: ~p, ~p on lines: ~p, ~p", [a,b,c,2,3]),
+    Description2 = io_lib:format("Module ~p aliased to several modules: ~p, ~p on lines: ~p, ~p", [a,b,g,2,4]),
+    Description3 = io_lib:format("Module ~p aliased to several modules: ~p, ~p on lines: ~p, ~p", [a,c,g,3,4]),
+    ExpectedEForms = [
+        {attribute,1,file,{"test/malias_tests.erl",1}},
+        {attribute,1,module,malias_tests},
+        {attribute,2,malias,Param1},
+        {attribute,3,malias,Param2},
+        {error,{3,malias,Description1}},
+        {attribute,4,malias,Param3},
+        {error,{4,malias,Description2}},
+        {error,{4,malias,Description3}}
+    ],
+    EForms = malias:parse_transform(Forms, []),
+    ?assertMatch(ExpectedEForms, EForms).
