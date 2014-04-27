@@ -126,8 +126,8 @@ ab_ac_crosslist_test() ->
         {attribute,3,malias,Param2},
         {error,{3,malias,Description1}},
         {attribute,4,malias,Param3},
-        {error,{4,malias,Description2}},
-        {error,{4,malias,Description3}}
+        {error,{4,malias,Description3}},
+        {error,{4,malias,Description2}}
     ],
     EForms = malias:parse_transform(Forms, []),
     ?assertMatch(ExpectedEForms, EForms).

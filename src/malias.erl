@@ -75,46 +75,43 @@ handle_malias(F, S) ->
 
 handle_items(Form, Pairs, S) ->
     OldPairs = S#state.pairs,
-    WForms = lookup_duplicates(Pairs) ++ lookup_cross_duplicates(Pairs, OldPairs),
-    EForms = lookup_ab_ac_in_list(Pairs) ++ lookup_ab_ac_crosslist(Pairs, OldPairs),
+    WForms = lookup_ab_ab_same_list(Pairs) ++ lookup_ab_ab_cross_lists(Pairs, OldPairs),
+    EForms = lookup_ab_ac_same_list(Pairs) ++ lookup_ab_ac_cross_lists(Pairs, OldPairs),
     Pairs2 = Pairs ++ OldPairs,
     {EForms ++ WForms ++ [Form], S#state{pairs=Pairs2}}.
 
-lookup_duplicates(List) when is_list(List) ->
+lookup_ab_ab_same_list(List) when is_list(List) ->
+    lookup_t1_t2_same_list(ab_ab, fun matcher_ab_ab/1, fun ab_ab_warning/2, List).
+
+lookup_ab_ac_same_list(List) when is_list(List) ->
+    lookup_t1_t2_same_list(ab_ac, fun matcher_ab_ac/1, fun ab_ac_error/2, List).
+
+lookup_t1_t2_same_list(Kind, Matcher, ErrorFun, List) when is_list(List) ->
     Line = element(1, hd(List)),
-    case iterate_with_tail(List, fun matcher_same/1, []) of
+    case iterate_with_tail(List, Matcher, []) of
         [] ->
             [];
         L when is_list(L)  ->
-            Tuples = lists:map(fun({T1,_T2}) -> T1 end, L),
-            UniqElements = unique_pairs(Tuples),
-            [duplicate_warning(Line, just_pairs(UniqElements))]
+            UniquePairs = unique_pairs(L),
+            case Kind of
+                ab_ab ->
+                    [ab_ab_warning(Line, UniquePairs)];
+                _ ->
+                    [ErrorFun(Line, Pair) || Pair <- UniquePairs]
+            end
     end.
 
-lookup_cross_duplicates(_Pairs, []) ->
-    [];
-lookup_cross_duplicates(Pairs, OldPairs) ->
+lookup_ab_ab_cross_lists(Pairs, OldPairs) ->
+    lookup_t1_t2_cross_lists(fun matcher_ab_ab/1, fun ab_ab_cross_warning/2, Pairs, OldPairs).
+
+lookup_ab_ac_cross_lists(Pairs, OldPairs) when is_list(Pairs) ->
+    lookup_t1_t2_cross_lists(fun matcher_ab_ac/1, fun ab_ac_cross_error/2, Pairs, OldPairs).
+
+lookup_t1_t2_cross_lists(Matcher, ErrorFun, Pairs, OldPairs) ->
     Line = element(1, hd(Pairs)),
     UniqPairs = unique_pairs(Pairs),
-    Duplicates = iterate_with_list(UniqPairs, OldPairs, fun matcher_same/1),
-    [cross_duplicate_warning(Line, {A,B}, PrevLine) ||
-        {{_,A,B}, {PrevLine,A,B}} <- lists:reverse(Duplicates)].
-
-lookup_ab_ac_in_list(List) when is_list(List) ->
-    Line = element(1, hd(List)),
-    case iterate_with_tail(List, fun matcher_ab_ac/1, []) of
-        [] ->
-            [];
-        L when is_list(L)  ->
-            [ab_ac_error(Line, Pair) || Pair <- unique_pairs(L)]
-    end.
-
-lookup_ab_ac_crosslist(Pairs, OldPairs) when is_list(Pairs) ->
-    Line = element(1, hd(Pairs)),
-    UniqPairs = unique_pairs(Pairs),
-    Matches = iterate_with_list(UniqPairs, OldPairs, fun matcher_ab_ac/1),
-    [ab_ac_cross_error(Line, {A,B,C}, PrevLine, ThisLine) ||
-        {{ThisLine,A,C}, {PrevLine,A,B}} <- Matches].
+    Duplicates = iterate_with_list(UniqPairs, OldPairs, Matcher),
+    [ErrorFun(Line, Tuples) || Tuples <- lists:reverse(Duplicates)].
 
 iterate_with_list(List, List2, Matcher) ->
     Fun = fun(T, Acc) ->
@@ -138,15 +135,11 @@ match_all(H, T, Matcher) ->
     end,
     lists:filtermap(Fun, T).
 
-matcher_same({_,A,B}) ->
+matcher_ab_ab({_,A,B}) ->
     fun({_,X,Y}) -> X =:= A andalso Y =:= B end.
 
 matcher_ab_ac({_,A,B}) ->
     fun({_,X,Y}) -> X =:= A andalso Y =/= B end.
-
-just_pairs(List) ->
-    Fun = fun({_,A,B}) -> {A,B} end,
-    lists:map(Fun, List).
 
 unique_pairs(L) when is_list(L) ->
     unique_pairs(L, []).
@@ -188,18 +181,19 @@ ab_ac_error(Line, {{_,A,B},{_,A,C}}) ->
     Description = io_lib:format("Module ~p aliased to several modules: ~p, ~p", [A,B,C]),
     {error, {Line, ?MODULE, Description}}.
 
-ab_ac_cross_error(Line, {A,B,C}, BLine, CLine) ->
+ab_ac_cross_error(Line, {{CLine,A,C},{BLine,A,B}}) ->
     Description = io_lib:format("Module ~p aliased to several modules: ~p, ~p on lines: ~p, ~p", [A,B,C,BLine,CLine]),
     {error, {Line, ?MODULE, Description}}.
 
 
-duplicate_warning(Line, Tuples) ->
+ab_ab_warning(Line, Tuples) ->
+    ABList = lists:map(fun({{_,A,B},_T2}) -> {A,B} end, Tuples),
     Format = string:join(lists:duplicate(length(Tuples), "~p"), ", "),
-    Description = io_lib:format("Duplicates in malias: " ++ Format, Tuples),
+    Description = io_lib:format("Duplicates in malias: " ++ Format, ABList),
     {warning, {Line, ?MODULE, Description}}.
 
-cross_duplicate_warning(Line, Tuple, PrevLine) ->
-    Description = io_lib:format("Element ~p is duplicated on line ~p", [Tuple, PrevLine]),
+ab_ab_cross_warning(Line, {{_,A,B},{PrevLine,A,B}}) ->
+    Description = io_lib:format("Element ~p is duplicated on line ~p", [{A,B}, PrevLine]),
     {warning, {Line, ?MODULE, Description}}.
 
 transform_pairs(List) when is_list(List) ->
