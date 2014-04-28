@@ -131,3 +131,50 @@ ab_ac_crosslist_test() ->
     ],
     EForms = malias:parse_transform(Forms, []),
     ?assertMatch(ExpectedEForms, EForms).
+
+ab_cb_same_list_test() ->
+    Param = [{a,b}, {e,f}, {c,b}, {d,f}, {k,l}],
+    Forms = [
+        {attribute,1,file,{"test/malias_tests.erl",1}},
+        {attribute,1,module,malias_tests},
+        {attribute,2,malias,Param}
+    ],
+    Description1 = io_lib:format("Modules ~p and ~p aliased to the same module ~p", [a,c,b]),
+    Description2 = io_lib:format("Modules ~p and ~p aliased to the same module ~p", [e,d,f]),
+    ExpectedEForms = [
+        {attribute,1,file,{"test/malias_tests.erl",1}},
+        {attribute,1,module,malias_tests},
+        {attribute,2,malias,Param},
+        {error,{2,malias,Description1}},
+        {error,{2,malias,Description2}}
+    ],
+    EForms = malias:parse_transform(Forms, []),
+    ?assertMatch(ExpectedEForms, EForms).
+
+ab_cb_crosslist_test() ->
+    Param1 = [{d,h}, {e,f}, {a,b}],
+    Param2 = [{c,b}],
+    Param3 = [{k,b}],
+    Forms = [
+        {attribute,1,file,{"test/malias_tests.erl",1}},
+        {attribute,1,module,malias_tests},
+        {attribute,2,malias,Param1},
+        {attribute,3,malias,Param2},
+        {attribute,4,malias,Param3}
+    ],
+    Description1 = io_lib:format("Modules ~p and ~p aliased to the same module ~p on lines: ~p, ~p", [c,a,b,3,2]),
+    Description2 = io_lib:format("Modules ~p and ~p aliased to the same module ~p on lines: ~p, ~p", [k,c,b,4,3]),
+    Description3 = io_lib:format("Modules ~p and ~p aliased to the same module ~p on lines: ~p, ~p", [k,a,b,4,2]),
+    ExpectedEForms = [
+        {attribute,1,file,{"test/malias_tests.erl",1}},
+        {attribute,1,module,malias_tests},
+        {attribute,2,malias,Param1},
+        {attribute,3,malias,Param2},
+        {error,{3,malias,Description1}},
+        {attribute,4,malias,Param3},
+        {error,{4,malias,Description2}},
+        {error,{4,malias,Description3}}
+    ],
+    EForms = malias:parse_transform(Forms, []),
+    ?assertMatch(ExpectedEForms, EForms).
+
