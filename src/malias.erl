@@ -5,7 +5,6 @@
 -record(state, {error=false, pairs=[]}).
 
 %TODO:
-% * Make better duplication warning
 % * Add example of Emake-file
 % * describe tuple-usage in doc
 
@@ -243,7 +242,7 @@ ab_bc_cross_error(Line, {{ALine,A,B},{BLine,B,C}}) ->
 ab_ab_warning(Line, Tuples) ->
     ABList = lists:map(fun({{_,A,B},_T2}) -> {A,B} end, Tuples),
     Format = string:join(lists:duplicate(length(Tuples), "~p"), ", "),
-    Description = io_lib:format("Duplicates in malias: " ++ Format, ABList),
+    Description = io_lib:format("Elements are duplicated: " ++ Format, ABList),
     {warning, {Line, ?MODULE, Description}}.
 
 ab_ab_cross_warning(Line, {{_,A,B},{PrevLine,A,B}}) ->

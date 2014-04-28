@@ -76,7 +76,7 @@ ab_ab_same_list_test() ->
         {attribute,1,module,malias_tests},
         {attribute,2,malias,Param}
     ],
-    Description = io_lib:format("Duplicates in malias: ~p, ~p", [{a,b}, {e,f}]),
+    Description = io_lib:format("Elements are duplicated: ~p, ~p", [{a,b}, {e,f}]),
     ExpectedEForms = [
         {attribute,1,file,{"test/malias_tests.erl",1}},
         {attribute,1,module,malias_tests},
