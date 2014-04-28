@@ -49,7 +49,7 @@ incorrect_list_test() ->
     EForms = malias:parse_transform(Forms, []),
     ?assertMatch(ExpectedEForms, EForms).
 
-duplicated_items_same_list_test() ->
+ab_ab_same_list_test() ->
     Param = [{a,b}, {c,d}, {a,b}, {e,f}, {e,f}],
     Forms = [
         {attribute,1,file,{"test/malias_tests.erl",1}},
@@ -66,7 +66,7 @@ duplicated_items_same_list_test() ->
     EForms = malias:parse_transform(Forms, []),
     ?assertMatch(ExpectedEForms, EForms).
 
-cross_duplicated_items_test() ->
+ab_ab_crosslist_test() ->
     Param = [{a,b}, {c,d}, {e,f}],
     Param2 = [{a,b}, {e,f}],
     Forms = [
