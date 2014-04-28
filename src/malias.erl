@@ -5,11 +5,7 @@
 -record(state, {error=false, pairs=[]}).
 
 %TODO:
-% * error in case of overwritten import, e.g. [{io, one}, {cool, one}]
-%  - show on which lines such conflict occurs
-%    (line 7, line 9 for 2 malias options)
-% * error for same-alias: [{lists, l}, {string, l}]
-% * error for abc-alias: [{a, b}, {b, c}]
+% * Error on AA aliasing
 % * Add example of Emake-file
 % * describe tuple-usage in doc
 
@@ -76,7 +72,7 @@ handle_malias(F, S) ->
 handle_items(Form, Pairs, S) ->
     OldPairs = S#state.pairs,
     WForms = lookup_ab_ab_same_list(Pairs) ++ lookup_ab_ab_cross_lists(Pairs, OldPairs),
-    EForms = lookup_ab_ac_same_list(Pairs) ++ lookup_ab_ac_cross_lists(Pairs, OldPairs) ++ lookup_ab_cb_same_list(Pairs) ++ lookup_ab_cb_cross_lists(Pairs, OldPairs),
+    EForms = lookup_ab_ac_same_list(Pairs) ++ lookup_ab_ac_cross_lists(Pairs, OldPairs) ++ lookup_ab_cb_same_list(Pairs) ++ lookup_ab_cb_cross_lists(Pairs, OldPairs) ++ lookup_ab_bc_same_list(Pairs) ++ lookup_ab_bc_cross_lists(Pairs, OldPairs),
     Pairs2 = Pairs ++ OldPairs,
     {EForms ++ WForms ++ [Form], S#state{pairs=Pairs2}}.
 
@@ -88,6 +84,9 @@ lookup_ab_ac_same_list(List) when is_list(List) ->
 
 lookup_ab_cb_same_list(List) when is_list(List) ->
     lookup_t1_t2_same_list(ab_cb, fun matcher_ab_cb/1, fun ab_cb_error/2, List).
+
+lookup_ab_bc_same_list(List) when is_list(List) ->
+    lookup_t1_t2_same_list(ab_bc, fun matcher_ab_bc/1, fun ab_bc_error/2, List).
 
 lookup_t1_t2_same_list(Kind, Matcher, ErrorFun, List) when is_list(List) ->
     Line = element(1, hd(List)),
@@ -112,6 +111,9 @@ lookup_ab_ac_cross_lists(Pairs, OldPairs) when is_list(Pairs) ->
 
 lookup_ab_cb_cross_lists(Pairs, OldPairs) when is_list(Pairs) ->
     lookup_t1_t2_cross_lists(fun matcher_ab_cb/1, fun ab_cb_cross_error/2, Pairs, OldPairs).
+
+lookup_ab_bc_cross_lists(Pairs, OldPairs) when is_list(Pairs) ->
+    lookup_t1_t2_cross_lists(fun matcher_ab_bc/1, fun ab_bc_cross_error/2, Pairs, OldPairs).
 
 lookup_t1_t2_cross_lists(Matcher, ErrorFun, Pairs, OldPairs) ->
     Line = element(1, hd(Pairs)),
@@ -149,6 +151,12 @@ matcher_ab_ac({_,A,B}) ->
 
 matcher_ab_cb({_,A,B}) ->
     fun({_,X,Y}) -> X =/= A andalso Y =:= B end.
+
+matcher_ab_bc({_,A,B}) ->
+    fun({_,X,Y}) ->
+            (X =:= B andalso Y =/= A) orelse
+            (X =/= B andalso Y =:= A)
+    end.
 
 unique_pairs(L) when is_list(L) ->
     unique_pairs(L, []).
@@ -194,15 +202,25 @@ ab_cb_error(Line, {{_,A,B},{_,C,B}}) ->
     Description = io_lib:format("Modules ~p and ~p aliased to the same module ~p", [A,C,B]),
     {error, {Line, ?MODULE, Description}}.
 
+ab_bc_error(Line, {{L2,B,C},{L1,A,B}}) ->
+    ab_bc_error(Line, {{L1,A,B},{L2,B,C}});
+ab_bc_error(Line, {{_,A,B},{_,B,C}}) ->
+    Description = io_lib:format("Cross aliasing error. Module ~p is aliased to ~p and module ~p is aliased to ~p", [A,B,B,C]),
+    {error, {Line, ?MODULE, Description}}.
+
 ab_ac_cross_error(Line, {{CLine,A,C},{BLine,A,B}}) ->
     Description = io_lib:format("Module ~p aliased to several modules: ~p, ~p on lines: ~p, ~p", [A,B,C,BLine,CLine]),
     {error, {Line, ?MODULE, Description}}.
 
 ab_cb_cross_error(Line, {{ALine,A,B},{CLine,C,B}}) ->
     Description = io_lib:format("Modules ~p and ~p aliased to the same module ~p on lines: ~p, ~p", [A,C,B,ALine,CLine]),
-    io:format(Description),
     {error, {Line, ?MODULE, Description}}.
 
+ab_bc_cross_error(Line, {{BLine,B,C}, {ALine,A,B}}) ->
+    ab_bc_cross_error(Line, {{ALine,A,B},{BLine,B,C}});
+ab_bc_cross_error(Line, {{ALine,A,B},{BLine,B,C}}) ->
+    Description = io_lib:format("Cross aliasing error. Module ~p is aliased to ~p and module ~p is aliased to ~p on lines: ~p, ~p", [A,B,B,C,ALine,BLine]),
+    {error, {Line, ?MODULE, Description}}.
 
 ab_ab_warning(Line, Tuples) ->
     ABList = lists:map(fun({{_,A,B},_T2}) -> {A,B} end, Tuples),

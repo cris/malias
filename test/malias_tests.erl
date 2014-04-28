@@ -178,3 +178,46 @@ ab_cb_crosslist_test() ->
     EForms = malias:parse_transform(Forms, []),
     ?assertMatch(ExpectedEForms, EForms).
 
+ab_bc_same_list_test() ->
+    Param = [{a,b}, {f,d}, {b,c}, {e,f}, {k,l}],
+    Forms = [
+        {attribute,1,file,{"test/malias_tests.erl",1}},
+        {attribute,1,module,malias_tests},
+        {attribute,2,malias,Param}
+    ],
+    Description1 = io_lib:format("Cross aliasing error. Module ~p is aliased to ~p and module ~p is aliased to ~p", [a,b,b,c]),
+    Description2 = io_lib:format("Cross aliasing error. Module ~p is aliased to ~p and module ~p is aliased to ~p", [e,f,f,d]),
+    ExpectedEForms = [
+        {attribute,1,file,{"test/malias_tests.erl",1}},
+        {attribute,1,module,malias_tests},
+        {attribute,2,malias,Param},
+        {error,{2,malias,Description1}},
+        {error,{2,malias,Description2}}
+    ],
+    EForms = malias:parse_transform(Forms, []),
+    ?assertMatch(ExpectedEForms, EForms).
+
+ab_bc_crosslist_test() ->
+    Param1 = [{d,h}, {e,f}, {a,b}],
+    Param2 = [{b,c}],
+    Param3 = [{f,k}],
+    Forms = [
+        {attribute,1,file,{"test/malias_tests.erl",1}},
+        {attribute,1,module,malias_tests},
+        {attribute,2,malias,Param1},
+        {attribute,3,malias,Param2},
+        {attribute,4,malias,Param3}
+    ],
+    Description1 = io_lib:format("Cross aliasing error. Module ~p is aliased to ~p and module ~p is aliased to ~p on lines: ~p, ~p", [a,b,b,c,2,3]),
+    Description2 = io_lib:format("Cross aliasing error. Module ~p is aliased to ~p and module ~p is aliased to ~p on lines: ~p, ~p", [e,f,f,k,2,4]),
+    ExpectedEForms = [
+        {attribute,1,file,{"test/malias_tests.erl",1}},
+        {attribute,1,module,malias_tests},
+        {attribute,2,malias,Param1},
+        {attribute,3,malias,Param2},
+        {error,{3,malias,Description1}},
+        {attribute,4,malias,Param3},
+        {error,{4,malias,Description2}}
+    ],
+    EForms = malias:parse_transform(Forms, []),
+    ?assertMatch(ExpectedEForms, EForms).
