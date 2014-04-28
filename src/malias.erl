@@ -5,7 +5,7 @@
 -record(state, {error=false, pairs=[]}).
 
 %TODO:
-% * Error on AA aliasing
+% * Make better duplication warning
 % * Add example of Emake-file
 % * describe tuple-usage in doc
 
@@ -72,9 +72,19 @@ handle_malias(F, S) ->
 handle_items(Form, Pairs, S) ->
     OldPairs = S#state.pairs,
     WForms = lookup_ab_ab_same_list(Pairs) ++ lookup_ab_ab_cross_lists(Pairs, OldPairs),
-    EForms = lookup_ab_ac_same_list(Pairs) ++ lookup_ab_ac_cross_lists(Pairs, OldPairs) ++ lookup_ab_cb_same_list(Pairs) ++ lookup_ab_cb_cross_lists(Pairs, OldPairs) ++ lookup_ab_bc_same_list(Pairs) ++ lookup_ab_bc_cross_lists(Pairs, OldPairs),
+    EForms = lookup_aa_same_list(Pairs) ++ lookup_ab_ac_same_list(Pairs) ++ lookup_ab_ac_cross_lists(Pairs, OldPairs) ++ lookup_ab_cb_same_list(Pairs) ++ lookup_ab_cb_cross_lists(Pairs, OldPairs) ++ lookup_ab_bc_same_list(Pairs) ++ lookup_ab_bc_cross_lists(Pairs, OldPairs),
     Pairs2 = Pairs ++ OldPairs,
     {EForms ++ WForms ++ [Form], S#state{pairs=Pairs2}}.
+
+lookup_aa_same_list(List) when is_list(List) ->
+    Line = element(1, hd(List)),
+    case lists:filter(fun matcher_aa/1, List) of
+        [] ->
+            [];
+        L when is_list(L)  ->
+            UniquePairs = unique_pairs(L),
+            [aa_error(Line, Pair) || Pair <- UniquePairs]
+    end.
 
 lookup_ab_ab_same_list(List) when is_list(List) ->
     lookup_t1_t2_same_list(ab_ab, fun matcher_ab_ab/1, fun ab_ab_warning/2, List).
@@ -143,6 +153,9 @@ match_all(H, T, Matcher) ->
     end,
     lists:filtermap(Fun, T).
 
+matcher_aa({_,A,B}) ->
+    A =:= B.
+
 matcher_ab_ab({_,A,B}) ->
     fun({_,X,Y}) -> X =:= A andalso Y =:= B end.
 
@@ -192,6 +205,11 @@ correct_list(List) when is_list(List) ->
 
 parameter_error(Line, Term) ->
     Description = io_lib:format("Incorrect parameter for malias: ~p~n", [Term]),
+    {error, {Line, ?MODULE, Description}}.
+
+aa_error(Line, {_,A,A}) ->
+    Description = io_lib:format("Module ~p is aliased to itself", [A]),
+    io:format(Description),
     {error, {Line, ?MODULE, Description}}.
 
 ab_ac_error(Line, {{_,A,B},{_,A,C}}) ->

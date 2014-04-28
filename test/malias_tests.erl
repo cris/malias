@@ -49,6 +49,26 @@ incorrect_list_test() ->
     EForms = malias:parse_transform(Forms, []),
     ?assertMatch(ExpectedEForms, EForms).
 
+aa_list_test() ->
+    Param = [{c,d}, {a,a}, {e,f}, {b,b}],
+    Forms = [
+        {attribute,1,file,{"test/malias_tests.erl",1}},
+        {attribute,1,module,malias_tests},
+        {attribute,2,malias,Param}
+    ],
+    Format = "Module ~p is aliased to itself",
+    Description1 = io_lib:format(Format, [a]),
+    Description2 = io_lib:format(Format, [b]),
+    ExpectedEForms = [
+        {attribute,1,file,{"test/malias_tests.erl",1}},
+        {attribute,1,module,malias_tests},
+        {attribute,2,malias,Param},
+        {error,{2,malias,Description1}},
+        {error,{2,malias,Description2}}
+    ],
+    EForms = malias:parse_transform(Forms, []),
+    ?assertMatch(ExpectedEForms, EForms).
+
 ab_ab_same_list_test() ->
     Param = [{a,b}, {c,d}, {a,b}, {e,f}, {e,f}],
     Forms = [
