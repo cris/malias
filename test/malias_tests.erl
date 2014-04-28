@@ -75,8 +75,9 @@ ab_ab_crosslist_test() ->
         {attribute,2,malias,Param},
         {attribute,3,malias,Param2}
     ],
-    Description1 = io_lib:format("Element ~p is duplicated on line ~p", [{a,b}, 2]),
-    Description2 = io_lib:format("Element ~p is duplicated on line ~p", [{e,f}, 2]),
+    Format = "Element ~p is duplicated on line ~p",
+    Description1 = io_lib:format(Format, [{a,b}, 2]),
+    Description2 = io_lib:format(Format, [{e,f}, 2]),
     ExpectedEForms = [
         {attribute,1,file,{"test/malias_tests.erl",1}},
         {attribute,1,module,malias_tests},
@@ -116,9 +117,10 @@ ab_ac_crosslist_test() ->
         {attribute,3,malias,Param2},
         {attribute,4,malias,Param3}
     ],
-    Description1 = io_lib:format("Module ~p aliased to several modules: ~p, ~p on lines: ~p, ~p", [a,b,c,2,3]),
-    Description2 = io_lib:format("Module ~p aliased to several modules: ~p, ~p on lines: ~p, ~p", [a,b,g,2,4]),
-    Description3 = io_lib:format("Module ~p aliased to several modules: ~p, ~p on lines: ~p, ~p", [a,c,g,3,4]),
+    Format = "Module ~p aliased to several modules: ~p, ~p on lines: ~p, ~p",
+    Description1 = io_lib:format(Format, [a,b,c,2,3]),
+    Description2 = io_lib:format(Format, [a,b,g,2,4]),
+    Description3 = io_lib:format(Format, [a,c,g,3,4]),
     ExpectedEForms = [
         {attribute,1,file,{"test/malias_tests.erl",1}},
         {attribute,1,module,malias_tests},
@@ -139,8 +141,9 @@ ab_cb_same_list_test() ->
         {attribute,1,module,malias_tests},
         {attribute,2,malias,Param}
     ],
-    Description1 = io_lib:format("Modules ~p and ~p aliased to the same module ~p", [a,c,b]),
-    Description2 = io_lib:format("Modules ~p and ~p aliased to the same module ~p", [e,d,f]),
+    Format = "Modules ~p and ~p aliased to the same module ~p",
+    Description1 = io_lib:format(Format, [a,c,b]),
+    Description2 = io_lib:format(Format, [e,d,f]),
     ExpectedEForms = [
         {attribute,1,file,{"test/malias_tests.erl",1}},
         {attribute,1,module,malias_tests},
@@ -162,9 +165,10 @@ ab_cb_crosslist_test() ->
         {attribute,3,malias,Param2},
         {attribute,4,malias,Param3}
     ],
-    Description1 = io_lib:format("Modules ~p and ~p aliased to the same module ~p on lines: ~p, ~p", [c,a,b,3,2]),
-    Description2 = io_lib:format("Modules ~p and ~p aliased to the same module ~p on lines: ~p, ~p", [k,c,b,4,3]),
-    Description3 = io_lib:format("Modules ~p and ~p aliased to the same module ~p on lines: ~p, ~p", [k,a,b,4,2]),
+    Format = "Modules ~p and ~p aliased to the same module ~p on lines: ~p, ~p",
+    Description1 = io_lib:format(Format, [c,a,b,3,2]),
+    Description2 = io_lib:format(Format, [k,c,b,4,3]),
+    Description3 = io_lib:format(Format, [k,a,b,4,2]),
     ExpectedEForms = [
         {attribute,1,file,{"test/malias_tests.erl",1}},
         {attribute,1,module,malias_tests},
@@ -185,8 +189,9 @@ ab_bc_same_list_test() ->
         {attribute,1,module,malias_tests},
         {attribute,2,malias,Param}
     ],
-    Description1 = io_lib:format("Cross aliasing error. Module ~p is aliased to ~p and module ~p is aliased to ~p", [a,b,b,c]),
-    Description2 = io_lib:format("Cross aliasing error. Module ~p is aliased to ~p and module ~p is aliased to ~p", [e,f,f,d]),
+    Format = "Cross aliasing error. Module ~p is aliased to ~p and module ~p is aliased to ~p",
+    Description1 = io_lib:format(Format, [a,b,b,c]),
+    Description2 = io_lib:format(Format, [e,f,f,d]),
     ExpectedEForms = [
         {attribute,1,file,{"test/malias_tests.erl",1}},
         {attribute,1,module,malias_tests},
@@ -208,8 +213,9 @@ ab_bc_crosslist_test() ->
         {attribute,3,malias,Param2},
         {attribute,4,malias,Param3}
     ],
-    Description1 = io_lib:format("Cross aliasing error. Module ~p is aliased to ~p and module ~p is aliased to ~p on lines: ~p, ~p", [a,b,b,c,2,3]),
-    Description2 = io_lib:format("Cross aliasing error. Module ~p is aliased to ~p and module ~p is aliased to ~p on lines: ~p, ~p", [e,f,f,k,2,4]),
+    Format = "Cross aliasing error. Module ~p is aliased to ~p and module ~p is aliased to ~p on lines: ~p, ~p",
+    Description1 = io_lib:format(Format, [a,b,b,c,2,3]),
+    Description2 = io_lib:format(Format, [e,f,f,k,2,4]),
     ExpectedEForms = [
         {attribute,1,file,{"test/malias_tests.erl",1}},
         {attribute,1,module,malias_tests},
