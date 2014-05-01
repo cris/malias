@@ -1,3 +1,6 @@
+%% This file is based on a copy of erl_id_trans.erl from the OTP 17.0.1
+%% Erlang/OTP
+
 %% ``The contents of this file are subject to the Erlang Public License,
 %% Version 1.1, (the "License"); you may not use this file except in
 %% compliance with the License. You should have received a copy of the
@@ -15,7 +18,7 @@
 %% 
 %%     $Id$
 %%
--module(erl_id_trans).
+-module(malias).
 
 %% A identity transformer of Erlang abstract syntax.
 
@@ -24,10 +27,22 @@
 %% N.B. if this module is to be used as a basis for tranforms then
 %% all the error cases must be handled otherwise this module just crashes!
 
--export([parse_transform/2]).
+-export([parse_transform/2, format_error/1]).
 
 parse_transform(Forms, _Options) ->
-    forms(Forms).
+    Forms3 = case malias_helper:process_malias_options(Forms) of
+        {process, Forms2} ->
+            io:format("here1"),
+            forms(Forms2);
+        {ignore, Forms2} ->
+            Forms2
+    end,
+    io:format("here2"),
+    %malias_helper:cleanup(),
+    Forms3.
+
+format_error(Message) ->
+    malias_helper:format_error(Message).
 
 %% forms(Fs) -> lists:map(fun (F) -> form(F) end, Fs).
 
@@ -195,9 +210,9 @@ pattern_grp([]) ->
 
 bit_types([]) ->
     [];
-bit_types([Atom | Rest]) when atom(Atom) ->
+bit_types([Atom | Rest]) when is_atom(Atom) ->
     [Atom | bit_types(Rest)];
-bit_types([{Atom, Integer} | Rest]) when atom(Atom), integer(Integer) ->
+bit_types([{Atom, Integer} | Rest]) when is_atom(Atom), is_integer(Integer) ->
     [{Atom, Integer} | bit_types(Rest)].
 
 
@@ -225,7 +240,7 @@ pattern_fields([]) -> [].
 
 %% -type guard([GuardTest]) -> [GuardTest].
 
-guard([G0|Gs]) when list(G0) ->
+guard([G0|Gs]) when is_list(G0) ->
     [guard0(G0) | guard(Gs)];
 guard(L) ->
     guard0(L).
@@ -449,7 +464,7 @@ expr({'fun',Line,Body}) ->
 	    {'fun',Line,{function,M,F,A}};
 	{function,M0,F0,A0} ->
 	    %% R15: fun M:F/A with variables.
-	    M = expr(M0),
+        M = malias_helper:change_module_name(M0),
 	    F = expr(F0),
 	    A = expr(A0),
 	    {'fun',Line,{function,M,F,A}}
@@ -483,7 +498,7 @@ expr({op,Line,Op,L0,R0}) ->
     {op,Line,Op,L1,R1};
 %% The following are not allowed to occur anywhere!
 expr({remote,Line,M0,F0}) ->
-    M1 = expr(M0),
+    M1 = malias_helper:change_module_name(M0),
     F1 = expr(F0),
     {remote,Line,M1,F1}.
 

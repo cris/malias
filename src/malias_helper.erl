@@ -1,28 +1,48 @@
--module(malias).
+-module(malias_helper).
 
--export([parse_transform/2, format_error/1]).
+-export([process_malias_options/1, cleanup/0, format_error/1, change_module_name/1]).
 
 -record(state, {error=false, pairs=[]}).
+
+-define(PTMODULE, malias).
 
 %TODO:
 % * Add example of Emake-file
 % * describe tuple-usage in doc
 
-parse_transform(Forms, _Options) ->
+process_malias_options(Forms) ->
     %io:format("here ~p~n", [Forms]),
     case fetch_pairs(Forms) of
         {error, EForms} ->
             %io:format("here ~p~n", [EForms]),
-            EForms;
+            {ignore, EForms};
+        %TODO: add ignore response when no malias options
         {ok, Pairs, Forms2} ->
-            transform(Pairs, Forms2)
+            erlang:put(malias_opts, Pairs),
+            {process, Forms2}
     end.
+
+cleanup() ->
+    erlang:erase(malias_opts).
 
 format_error(Message) ->
     case io_lib:deep_char_list(Message) of
         true -> Message;
         _    -> io_lib:write(Message)
     end.
+
+change_module_name(M0={atom,Line,Module}) ->
+    Changes = erlang:get(malias_opts),
+    case proplists:lookup(Module, Changes) of
+        {Module, Original} ->
+            io:format("Changed ~p to ~p", [Module, Original]),
+            {atom,Line,Original};
+        none ->
+            M0
+    end;
+change_module_name(M0) ->
+    M0.
+
 
 %%% private
 
@@ -204,86 +224,52 @@ correct_list(List) when is_list(List) ->
 
 parameter_error(Line, Term) ->
     Description = io_lib:format("Incorrect parameter for malias: ~p~n", [Term]),
-    {error, {Line, ?MODULE, Description}}.
+    {error, {Line, ?PTMODULE, Description}}.
 
 aa_error(Line, {_,A,A}) ->
     Description = io_lib:format("Module ~p is aliased to itself", [A]),
     io:format(Description),
-    {error, {Line, ?MODULE, Description}}.
+    {error, {Line, ?PTMODULE, Description}}.
 
 ab_ac_error(Line, {{_,A,B},{_,A,C}}) ->
     Description = io_lib:format("Module ~p aliased to several modules: ~p, ~p", [A,B,C]),
-    {error, {Line, ?MODULE, Description}}.
+    {error, {Line, ?PTMODULE, Description}}.
 
 ab_cb_error(Line, {{_,A,B},{_,C,B}}) ->
     Description = io_lib:format("Modules ~p and ~p aliased to the same module ~p", [A,C,B]),
-    {error, {Line, ?MODULE, Description}}.
+    {error, {Line, ?PTMODULE, Description}}.
 
 ab_bc_error(Line, {{L2,B,C},{L1,A,B}}) ->
     ab_bc_error(Line, {{L1,A,B},{L2,B,C}});
 ab_bc_error(Line, {{_,A,B},{_,B,C}}) ->
     Description = io_lib:format("Cross aliasing error. Module ~p is aliased to ~p and module ~p is aliased to ~p", [A,B,B,C]),
-    {error, {Line, ?MODULE, Description}}.
+    {error, {Line, ?PTMODULE, Description}}.
 
 ab_ac_cross_error(Line, {{CLine,A,C},{BLine,A,B}}) ->
     Description = io_lib:format("Module ~p aliased to several modules: ~p, ~p on lines: ~p, ~p", [A,B,C,BLine,CLine]),
-    {error, {Line, ?MODULE, Description}}.
+    {error, {Line, ?PTMODULE, Description}}.
 
 ab_cb_cross_error(Line, {{ALine,A,B},{CLine,C,B}}) ->
     Description = io_lib:format("Modules ~p and ~p aliased to the same module ~p on lines: ~p, ~p", [A,C,B,ALine,CLine]),
-    {error, {Line, ?MODULE, Description}}.
+    {error, {Line, ?PTMODULE, Description}}.
 
 ab_bc_cross_error(Line, {{BLine,B,C}, {ALine,A,B}}) ->
     ab_bc_cross_error(Line, {{ALine,A,B},{BLine,B,C}});
 ab_bc_cross_error(Line, {{ALine,A,B},{BLine,B,C}}) ->
     Description = io_lib:format("Cross aliasing error. Module ~p is aliased to ~p and module ~p is aliased to ~p on lines: ~p, ~p", [A,B,B,C,ALine,BLine]),
-    {error, {Line, ?MODULE, Description}}.
+    {error, {Line, ?PTMODULE, Description}}.
 
 ab_ab_warning(Line, Tuples) ->
     ABList = lists:map(fun({{_,A,B},_T2}) -> {A,B} end, Tuples),
     Format = string:join(lists:duplicate(length(Tuples), "~p"), ", "),
     Description = io_lib:format("Elements are duplicated: " ++ Format, ABList),
-    {warning, {Line, ?MODULE, Description}}.
+    {warning, {Line, ?PTMODULE, Description}}.
 
 ab_ab_cross_warning(Line, {{_,A,B},{PrevLine,A,B}}) ->
     Description = io_lib:format("Element ~p is duplicated on line ~p", [{A,B}, PrevLine]),
-    {warning, {Line, ?MODULE, Description}}.
+    {warning, {Line, ?PTMODULE, Description}}.
 
 transform_pairs(List) when is_list(List) ->
     Fun = fun({_,A,B}) -> {B,A} end,
     lists:map(Fun, List).
 
-transform([], Forms) ->
-    Forms;
-transform(Changes, Forms) ->
-    Tree = erl_syntax:form_list(Forms),
-    ModifiedTree = postorder(Changes, Tree),
-    Forms2 = erl_syntax:revert_forms(ModifiedTree),
-    %io:format("Result tree~n~p~n", [Forms2]),
-    Forms2.
-
-apply_malias(Changes, Node) ->
-    case erl_syntax:type(Node) of
-        module_qualifier ->
-            Argument = erl_syntax:module_qualifier_argument(Node),
-            Module = erl_syntax:atom_value(Argument),
-            case proplists:lookup(Module, Changes) of
-                {Module, Original} ->
-                    Body = erl_syntax:module_qualifier_body(Node),
-                    NewArgument = erl_syntax:atom(Original),
-                    erl_syntax:module_qualifier(NewArgument, Body);
-                none ->
-                    Node
-            end;
-        _ ->
-            Node
-    end.
-
-postorder(Changes, Tree) ->
-    apply_malias(Changes, case erl_syntax:subtrees(Tree) of
-            [] -> Tree;
-            List -> erl_syntax:update_tree(Tree,
-                    [[postorder(Changes, Subtree)
-                            || Subtree <- Group]
-                        || Group <- List])
-        end).
