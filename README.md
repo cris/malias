@@ -1,11 +1,11 @@
 # malias - module alias
 
 To prevent name collision, every Erlang library uses some prefix for each
-module(e.g.: cowboy\_, ejabberd\_, rabbit\_). But standard Erlang doesn't
-provide means for importing such long names in more readable and short form.
+module(e.g.: `cowboy_`, `ejabberd_`, `rabbit_`). But standard Erlang doesn't
+provide means for aliasing such long names to more readable and short forms.
 
 **malias** is a parse-transform library, which allows to use any module with
-another name.
+another(more terse) name.
 
 Here is a short example of using Cowboy library:
 
@@ -20,28 +20,46 @@ Here is a short example of using Cowboy library:
         {ok, Req2} = req:reply(200, [], Body, Req),
         {ok, Req2, State}.
 
-We imported **cowboy_req** module as **req** module and used it inside
-index_handler module.
+Here `cowboy_req` module is aliased to `req` name inside of `index_handler`
+module.
 
 ## Usage
 
-To work with **malias**, you need to provide import options via malias
-attribute. It's a simple proplist with {original\_name, aliased\_name} pairs:
-
-    -malias([{lists, l}, {string, s}, {myproject_handler, handler}]).
-
-Also, add {parse\_transform, malias} compile option:
-
-    -compile({parse_transform, malias}).
-
-Or set it in compilation options for rebar:
+Add `malias` as first dependency in `rebar.config`:
 
     %% add malias in dependencies
     {deps, [
       {malias, ".*", {git, "https://github.com/cris/malias.git", {branch,"master"}}}
     ]}.
 
-    %% Erlang compiler options
-    {erl_opts, [{parse_transform, malias}]}.
+Being first is crucial, because parse-transform module should be built before
+usage in project.
 
+Now add `parse_transform` compile option in each module, where `malias` will be
+used:
 
+    -compile({parse_transform, malias}).
+
+Then add `malias` substitution option. It's a simple proplist with
+`{original_name, aliased_name}` pairs:
+
+    -malias([{lists, l}, {string, s}, {myproject_handler, handler}]).
+
+For one substitution, bare tuple can be used:
+
+    -malias({lists, l}).
+
+## Implementation details and support
+
+Right now **malias** correctly handle substitution in module function call:
+
+    A = short_name:fun()
+
+or wrapping module function into lambda:
+
+    F = fun short_name:fun/0
+
+**malias** is tested on Erlang R16, and should correctly work on R15 and
+R17(with maps support).
+
+In case of any issues fill in a bug or do a pull-request.
