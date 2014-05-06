@@ -32,13 +32,11 @@
 parse_transform(Forms, _Options) ->
     Forms3 = case malias_helper:process_malias_options(Forms) of
         {process, Forms2} ->
-            io:format("here1"),
             forms(Forms2);
         {ignore, Forms2} ->
             Forms2
     end,
-    io:format("here2"),
-    %malias_helper:cleanup(),
+    malias_helper:cleanup(),
     Forms3.
 
 format_error(Message) ->

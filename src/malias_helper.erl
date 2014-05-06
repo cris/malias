@@ -11,12 +11,12 @@
 % * describe tuple-usage in doc
 
 process_malias_options(Forms) ->
-    %io:format("here ~p~n", [Forms]),
     case fetch_pairs(Forms) of
         {error, EForms} ->
-            %io:format("here ~p~n", [EForms]),
             {ignore, EForms};
-        %TODO: add ignore response when no malias options
+        {ok, [], Forms2} ->
+            % skip malias processing, when no options found
+            {ignore, Forms2};
         {ok, Pairs, Forms2} ->
             erlang:put(malias_opts, Pairs),
             {process, Forms2}
@@ -35,7 +35,6 @@ change_module_name(M0={atom,Line,Module}) ->
     Changes = erlang:get(malias_opts),
     case proplists:lookup(Module, Changes) of
         {Module, Original} ->
-            io:format("Changed ~p to ~p", [Module, Original]),
             {atom,Line,Original};
         none ->
             M0
@@ -64,6 +63,10 @@ walk_forms([], Acc, State) ->
 walk_forms([F|Forms], Acc, State) ->
     {Items, State2} = handle_malias(F, State),
     walk_forms(Forms, Items ++ Acc, State2).
+
+transform_pairs(List) when is_list(List) ->
+    Fun = fun({_,A,B}) -> {B,A} end,
+    lists:map(Fun, List).
 
 handle_malias(F={attribute, Line, malias, {A,B}}, S) when is_atom(A), is_atom(B) ->
     Pairs = [{Line, A, B}],
@@ -268,8 +271,4 @@ ab_ab_warning(Line, Tuples) ->
 ab_ab_cross_warning(Line, {{_,A,B},{PrevLine,A,B}}) ->
     Description = io_lib:format("Element ~p is duplicated on line ~p", [{A,B}, PrevLine]),
     {warning, {Line, ?PTMODULE, Description}}.
-
-transform_pairs(List) when is_list(List) ->
-    Fun = fun({_,A,B}) -> {B,A} end,
-    lists:map(Fun, List).
 
